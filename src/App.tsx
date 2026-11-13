@@ -16,6 +16,7 @@ import { RoutineEditor } from './screens/RoutineEditor'
 import { RoutinePreview } from './screens/RoutinePreview'
 import { WorkoutDetail } from './screens/WorkoutDetail'
 import { ExerciseDetail } from './screens/ExerciseDetail'
+import { ImportPlan } from './screens/ImportPlan'
 
 type Tab = 'home' | 'history' | 'exercises' | 'settings'
 
@@ -36,6 +37,8 @@ function RouteView({ route, z }: { route: Route; z: number }) {
       return <WorkoutDetail id={route.id} z={z} />
     case 'exercise-detail':
       return <ExerciseDetail id={route.id} z={z} />
+    case 'plan-import':
+      return <ImportPlan z={z} />
   }
 }
 

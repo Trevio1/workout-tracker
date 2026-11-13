@@ -18,6 +18,9 @@ type IconName =
   | 'weight'
   | 'trophy'
   | 'folder'
+  | 'camera'
+  | 'copy'
+  | 'paste'
 
 const paths: Record<IconName, string> = {
   plus: 'M12 5v14M5 12h14',
@@ -40,6 +43,9 @@ const paths: Record<IconName, string> = {
   weight: 'M6 4h12l3 16H3zM12 4a2 2 0 1 0 0-.01',
   trophy: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3',
   folder: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+  camera: 'M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+  copy: 'M9 9h11v11H9zM5 15H4V4h11v1',
+  paste: 'M9 4h6v3H9zM8 5H5v16h14V5h-3M8 13h8M8 17h5',
 }
 
 interface Props {

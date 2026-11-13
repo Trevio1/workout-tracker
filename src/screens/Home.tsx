@@ -120,9 +120,18 @@ export function Home() {
 
       <div className="section-head">
         <h2>Routinen</h2>
-        <button className="btn btn-soft btn-sm" onClick={() => nav.push({ type: 'routine-edit' })}>
-          <Icon name="plus" size={18} /> Routine
-        </button>
+        <div className="row">
+          <button
+            className="btn btn-soft btn-sm"
+            onClick={() => nav.push({ type: 'plan-import' })}
+            aria-label="Plan per Foto importieren"
+          >
+            <Icon name="camera" size={18} /> Import
+          </button>
+          <button className="btn btn-soft btn-sm" onClick={() => nav.push({ type: 'routine-edit' })}>
+            <Icon name="plus" size={18} /> Routine
+          </button>
+        </div>
       </div>
 
       <div className="section-head" style={{ marginTop: 4 }}>
@@ -132,9 +141,12 @@ export function Home() {
       {routines && routines.length === 0 && (
         <div className="empty">
           Noch keine Routine. Lege deinen ersten Trainingsplan an, zum Beispiel „Push“, „Pull“ und „Beine“.
-          <div style={{ marginTop: 14 }}>
+          <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
             <button className="btn btn-soft btn-sm" onClick={() => nav.push({ type: 'routine-edit' })}>
               <Icon name="plus" size={18} /> Erste Routine anlegen
+            </button>
+            <button className="btn btn-soft btn-sm" onClick={() => nav.push({ type: 'plan-import' })}>
+              <Icon name="camera" size={18} /> Plan per Foto importieren
             </button>
           </div>
         </div>

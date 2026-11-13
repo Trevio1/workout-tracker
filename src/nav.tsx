@@ -5,6 +5,7 @@ export type Route =
   | { type: 'routine-preview'; id: string }
   | { type: 'workout-detail'; id: string }
   | { type: 'exercise-detail'; id: string }
+  | { type: 'plan-import' }
 
 interface NavApi {
   stack: Route[]
