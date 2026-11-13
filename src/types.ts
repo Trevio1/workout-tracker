@@ -15,6 +15,11 @@ export interface Exercise {
   note?: string
   pinned?: boolean
   custom?: boolean
+  /** Target rep range for double progression */
+  repMin?: number
+  repMax?: number
+  /** Smallest weight jump in kg (learned from history if unset) */
+  step?: number
 }
 
 export interface SetRow {

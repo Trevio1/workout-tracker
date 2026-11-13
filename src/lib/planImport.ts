@@ -1,6 +1,7 @@
 import { db, uid } from '../db'
 import { CATEGORY_LABEL, type Category, type Exercise, type ExerciseEntry, type Routine } from '../types'
 import { newSet } from './actions'
+import { rangeFromNote } from './range'
 
 // ---------- Prompt ----------
 
@@ -18,6 +19,7 @@ Regeln:
 - "sets" ist eine Liste mit einem Eintrag pro Satz. "kg" und "reps" als Zahl oder null, wenn auf dem Foto nichts steht. Bei Bereichen wie 8-12 nimm die untere Zahl. Aufwärmsätze bekommen "warmup": true.
 - Steht nur "3x10", dann sind das 3 Sätze mit reps 10.
 - Bei Cardio: "kg" = Distanz in km, "reps" = Dauer in Minuten.
+- "repMin"/"repMax": Wiederholungsbereich als Zahlen, z. B. 5 und 8 bei "5–8". Bei fester Zahl beide gleich. Ohne Angabe weglassen.
 - "note" (optional): Wiederholungsbereich und Ausführungshinweis vom Foto, z. B. "5–8 Wdh. · Kabel auf Hüfthöhe, mit Schlaufe". Ohne Infos weglassen.
 - Sind zwei Varianten derselben Übung im Plan (z. B. "Latzug, breiter Griff" und "Latzug, einarmig"), behalte beide Namen getrennt.
 - Erfinde nichts. Wenn du etwas nicht lesen kannst, lass es weg.
@@ -34,6 +36,8 @@ Antworte NUR mit einem JSON-Codeblock in genau diesem Format:
           "name": "Bankdrücken",
           "category": "barbell",
           "muscle": "Brust",
+          "repMin": 6,
+          "repMax": 8,
           "note": "6–8 Wdh. · Schulterblätter zusammen",
           "sets": [
             { "kg": 80, "reps": 8 },
@@ -64,6 +68,8 @@ export interface ParsedExercise {
   category: Category
   muscle: string
   note?: string
+  repMin?: number
+  repMax?: number
   sets: ParsedSet[]
 }
 
@@ -114,6 +120,15 @@ function parseSets(ex: Record<string, unknown>): ParsedSet[] {
   return Array.from({ length: count }, () => ({ kg, reps, warmup: false }))
 }
 
+function parseRange(e: Record<string, unknown>): { repMin?: number; repMax?: number } {
+  const min = toNum(e.repMin)
+  const max = toNum(e.repMax)
+  if (min && max && min <= max) return { repMin: Math.round(min), repMax: Math.round(max) }
+  // "reps": "5-8" or a range in the note
+  const fromText = rangeFromNote(`${toStr(e.reps)} Wdh`) ?? rangeFromNote(toStr(e.note))
+  return fromText ?? {}
+}
+
 /** Extracts the JSON from a pasted chat answer (code fences and surrounding text allowed) */
 export function parsePlan(text: string): ParsedRoutine[] {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/)
@@ -141,6 +156,7 @@ export function parsePlan(text: string): ParsedRoutine[] {
         category: toCategory(e.category),
         muscle: toStr(e.muscle) || 'Sonstiges',
         note: toStr(e.note) || undefined,
+        ...parseRange(e),
         sets: parseSets(e),
       }))
       .filter((e) => e.name !== ''),
@@ -196,13 +212,30 @@ export async function applyImport(routines: ResolvedRoutine[]): Promise<{ routin
         let exId = e.existingId ?? created.get(normalize(e.name))
         if (!exId) {
           exId = `ex-custom-${uid()}`
-          await db.exercises.add({ id: exId, name: e.name, category: e.category, muscle: e.muscle, note: e.note, custom: true })
+          await db.exercises.add({
+            id: exId,
+            name: e.name,
+            category: e.category,
+            muscle: e.muscle,
+            note: e.note,
+            repMin: e.repMin,
+            repMax: e.repMax,
+            custom: true,
+          })
           created.set(normalize(e.name), exId)
           newExercises += 1
-        } else if (e.note) {
-          // never overwrite a note the user already wrote
+        } else {
+          // only fill gaps, never overwrite what the user already set
           const existing = await db.exercises.get(exId)
-          if (existing && !existing.note) await db.exercises.update(exId, { note: e.note })
+          if (existing) {
+            const patch: Partial<Exercise> = {}
+            if (e.note && !existing.note) patch.note = e.note
+            if (e.repMin && e.repMax && !existing.repMin) {
+              patch.repMin = e.repMin
+              patch.repMax = e.repMax
+            }
+            if (Object.keys(patch).length) await db.exercises.update(exId, patch)
+          }
         }
         const sets = e.sets.length > 0 ? e.sets : [{ kg: null, reps: null, warmup: false }]
         entries.push({

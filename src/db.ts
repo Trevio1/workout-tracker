@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { ActiveWorkout, Exercise, Routine, Settings, Workout } from './types'
 import { SEED_EXERCISES } from './seed'
+import { rangeFromNote } from './lib/range'
 
 export const DEFAULT_SETTINGS: Settings = {
   id: 'settings',
@@ -25,6 +26,22 @@ export class AppDB extends Dexie {
       active: 'id',
       settings: 'id',
     })
+    // v2: rep ranges as real fields, taken from notes like "5–8 Wdh. · ..."
+    this.version(2)
+      .stores({})
+      .upgrade((tx) =>
+        tx
+          .table<Exercise, string>('exercises')
+          .toCollection()
+          .modify((ex) => {
+            if (ex.repMin && ex.repMax) return
+            const r = rangeFromNote(ex.note)
+            if (r) {
+              ex.repMin = r.repMin
+              ex.repMax = r.repMax
+            }
+          }),
+      )
     this.on('populate', (tx) => {
       tx.table('exercises').bulkAdd(SEED_EXERCISES)
       tx.table('settings').add(DEFAULT_SETTINGS)
