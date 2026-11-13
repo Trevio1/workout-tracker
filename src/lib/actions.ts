@@ -121,10 +121,14 @@ function stripHints(s: SetRow): SetRow {
   return { id: s.id, kg: s.kg, reps: s.reps, warmup: s.warmup, done: s.done }
 }
 
-export function routineDiffers(routine: Routine, w: Workout): boolean {
-  if (routine.exercises.length !== w.exercises.length) return true
+/**
+ * Compares the routine with the structure of the live workout (all sets, ticked or not),
+ * so skipped exercises don't count as a change.
+ */
+export function routineDiffers(routine: Routine, entries: ExerciseEntry[]): boolean {
+  if (routine.exercises.length !== entries.length) return true
   return routine.exercises.some((e, i) => {
-    const o = w.exercises[i]
+    const o = entries[i]
     return o.exerciseId !== e.exerciseId || o.sets.length !== e.sets.length
   })
 }
@@ -137,12 +141,13 @@ export function entriesToPlan(entries: ExerciseEntry[]): ExerciseEntry[] {
   }))
 }
 
-export async function finishWorkout(w: Workout, updateRoutine: boolean): Promise<void> {
+/** `planEntries`: the live workout's full structure to store as the routine, or null to keep it */
+export async function finishWorkout(w: Workout, planEntries: ExerciseEntry[] | null): Promise<void> {
   await db.transaction('rw', db.workouts, db.active, db.routines, async () => {
     await db.workouts.add(w)
     await db.active.delete('active')
-    if (updateRoutine && w.routineId) {
-      await db.routines.update(w.routineId, { exercises: entriesToPlan(w.exercises) })
+    if (planEntries && w.routineId) {
+      await db.routines.update(w.routineId, { exercises: entriesToPlan(planEntries) })
     }
   })
 }

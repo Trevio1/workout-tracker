@@ -64,8 +64,8 @@ export function WorkoutSummary({ id, z }: { id: string; z: number }) {
     return `${r.value} Wdh. bei ${fmtNum(r.kg ?? 0)} kg (vorher ${r.previous})`
   }
   const celebrate = sum.records.length > 0 || sum.increased.length > 0
-  const dv = sum.previous ? delta(sum.volume, sum.previous.volume) : null
-  const dr = sum.previous ? sum.reps - sum.previous.reps : null
+  const dv = sum.previous ? delta(sum.previous.nowVolume, sum.previous.volume) : null
+  const dr = sum.previous ? sum.previous.nowReps - sum.previous.reps : null
 
   return (
     <Sheet
@@ -121,7 +121,9 @@ export function WorkoutSummary({ id, z }: { id: string; z: number }) {
 
       {sum.previous && (
         <div className="sum-compare">
-          <span className="muted small">Im Vergleich zu {relativeDay(sum.previous.date)}</span>
+          <span className="muted small">
+            Gleiche {sum.previous.shared === 1 ? 'Übung' : `${sum.previous.shared} Übungen`} wie {relativeDay(sum.previous.date)}
+          </span>
           <div className="row" style={{ gap: 16, marginTop: 6 }}>
             {dv && <span className={`delta ${dv.up ? 'up' : 'down'}`}>Volumen {dv.text}</span>}
             {dr !== null && (

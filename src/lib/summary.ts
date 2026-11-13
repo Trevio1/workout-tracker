@@ -17,7 +17,8 @@ export interface Summary {
   volume: number
   sets: number
   reps: number
-  previous?: { volume: number; sets: number; reps: number; date: number }
+  /** comparison over the exercises both workouts share */
+  previous?: { volume: number; reps: number; nowVolume: number; nowReps: number; shared: number; date: number }
   records: PersonalRecord[]
   increased: { exerciseId: string; from: number; to: number }[]
   readyNext: string[]
@@ -26,6 +27,11 @@ export interface Summary {
 const totalReps = (w: Workout) =>
   w.exercises.reduce((n, e) => n + e.sets.filter((s) => !s.warmup).reduce((m, s) => m + (s.reps ?? 0), 0), 0)
 const totalSets = (w: Workout) => w.exercises.reduce((n, e) => n + e.sets.filter((s) => !s.warmup).length, 0)
+/** only the exercises that are in both workouts, so skipping one doesn't look like a drop */
+const onlyShared = (w: Workout, ids: Set<string>): Workout => ({
+  ...w,
+  exercises: w.exercises.filter((e) => ids.has(e.exerciseId)),
+})
 
 export function summarize(
   w: Workout,
@@ -85,11 +91,24 @@ export function summarize(
     volume: workoutVolume(w),
     sets: totalSets(w),
     reps: totalReps(w),
-    previous: prevSame
-      ? { volume: workoutVolume(prevSame), sets: totalSets(prevSame), reps: totalReps(prevSame), date: prevSame.start }
-      : undefined,
+    previous: prevSame ? compare(w, prevSame) : undefined,
     records,
     increased,
     readyNext,
+  }
+}
+
+function compare(w: Workout, prev: Workout): Summary['previous'] {
+  const ids = new Set(w.exercises.map((e) => e.exerciseId).filter((id) => prev.exercises.some((p) => p.exerciseId === id)))
+  if (ids.size === 0) return undefined
+  const a = onlyShared(w, ids)
+  const b = onlyShared(prev, ids)
+  return {
+    volume: workoutVolume(b),
+    reps: totalReps(b),
+    nowVolume: workoutVolume(a),
+    nowReps: totalReps(a),
+    shared: ids.size,
+    date: prev.start,
   }
 }

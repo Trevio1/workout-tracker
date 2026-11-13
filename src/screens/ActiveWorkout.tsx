@@ -139,7 +139,7 @@ export function ActiveWorkout({ initial, z }: Props) {
     let updateRoutine = false
     if (finished.routineId) {
       const routine = await db.routines.get(finished.routineId)
-      if (routine && routineDiffers(routine, finished)) {
+      if (routine && routineDiffers(routine, wRef.current.exercises)) {
         updateRoutine = await dialogs.confirm({
           title: 'Routine aktualisieren?',
           message: `Du hast Übungen oder Sätze geändert. Soll „${routine.name}“ so übernommen werden?`,
@@ -148,7 +148,7 @@ export function ActiveWorkout({ initial, z }: Props) {
         })
       }
     }
-    await finishWorkout(finished, updateRoutine)
+    await finishWorkout(finished, updateRoutine ? wRef.current.exercises : null)
     nav.setActiveOpen(false)
     nav.push({ type: 'workout-summary', id: finished.id })
   }

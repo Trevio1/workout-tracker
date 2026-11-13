@@ -27,6 +27,7 @@ describe('summarize', () => {
     expect(s.records[0]).toMatchObject({ kind: 'kg', value: 52.5, previous: 50 })
     expect(s.increased[0]).toMatchObject({ from: 50, to: 52.5 })
     expect(s.previous?.volume).toBe(800)
+    expect(s.previous?.nowVolume).toBe(577.5)
   })
 
   it('detects a rep record at the same weight', () => {
