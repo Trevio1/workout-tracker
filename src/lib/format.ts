@@ -23,7 +23,8 @@ export function fmtClock(totalSeconds: number): string {
 export function fmtDuration(ms: number): string {
   const min = Math.round(ms / 60000)
   if (min < 60) return `${min} Min.`
-  return `${Math.floor(min / 60)} Std. ${min % 60} Min.`
+  const rest = min % 60
+  return rest === 0 ? `${Math.floor(min / 60)} Std.` : `${Math.floor(min / 60)} Std. ${rest} Min.`
 }
 
 const dateFmt = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'short', year: 'numeric' })

@@ -28,17 +28,17 @@ export async function startWorkout(routine?: Routine): Promise<void> {
   const prev = await previousMap()
   const exercises: ExerciseEntry[] = (routine?.exercises ?? []).map((e) => {
     const last = prev.get(e.exerciseId) ?? []
-    return {
-      id: uid(),
-      exerciseId: e.exerciseId,
-      sets: e.sets.map((s, i) =>
-        newSet({
-          warmup: s.warmup,
-          hintKg: last[i]?.kg ?? s.kg,
-          hintReps: last[i]?.reps ?? s.reps,
-        }),
-      ),
-    }
+    // Fill down: a planned set without values takes the hint of the set above
+    let kgAbove: number | null = null
+    let repsAbove: number | null = null
+    const sets = e.sets.map((s, i) => {
+      const hintKg = last[i]?.kg ?? s.kg ?? kgAbove
+      const hintReps = last[i]?.reps ?? s.reps ?? repsAbove
+      kgAbove = hintKg
+      repsAbove = hintReps
+      return newSet({ warmup: s.warmup, hintKg, hintReps })
+    })
+    return { id: uid(), exerciseId: e.exerciseId, sets }
   })
   const active: ActiveWorkout = {
     id: 'active',

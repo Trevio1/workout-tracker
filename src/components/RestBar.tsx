@@ -22,8 +22,11 @@ export function RestBar({ rest, onChange }: Props) {
         −15
       </button>
       <div className="rest-track" role="timer" aria-label="Pause">
-        <div className="rest-fill" style={{ width: `${pct}%` }} />
         <div className="rest-time">Pause {fmtClock(Math.ceil(left))}</div>
+        {/* white copy of the label, clipped to the filled part for contrast */}
+        <div className="rest-fill" style={{ clipPath: `inset(0 ${100 - pct}% 0 0)` }}>
+          <div className="rest-time on-fill">Pause {fmtClock(Math.ceil(left))}</div>
+        </div>
       </div>
       <button className="btn btn-grey btn-sm" onClick={() => adjust(15)}>
         +15

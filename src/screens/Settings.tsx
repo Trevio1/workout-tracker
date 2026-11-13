@@ -130,7 +130,9 @@ export function Settings() {
       />
       <p className="group-foot">
         Alles bleibt auf diesem Handy, es gibt kein Konto und keine Cloud. Speichere ab und zu ein Backup in der
-        Dateien-App oder in iCloud Drive, damit nichts verloren geht. {counts ? `${counts.workouts} Workouts, ${counts.routines} Routinen gespeichert.` : ''}
+        Dateien-App oder in iCloud Drive, damit nichts verloren geht. {counts
+          ? `${counts.workouts} ${counts.workouts === 1 ? 'Workout' : 'Workouts'}, ${counts.routines} ${counts.routines === 1 ? 'Routine' : 'Routinen'} gespeichert.`
+          : ''}
       </p>
 
       <p className="group-label">App</p>

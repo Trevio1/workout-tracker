@@ -137,8 +137,10 @@ export function EntriesEditor({
       updateSet(entry.id, set.id, { done: false })
       return
     }
-    const kg = set.kg ?? set.hintKg ?? null
-    const reps = set.reps ?? set.hintReps ?? null
+    const idx = entry.sets.findIndex((s) => s.id === set.id)
+    const above = idx > 0 ? entry.sets[idx - 1] : undefined
+    const kg = set.kg ?? set.hintKg ?? above?.kg ?? null
+    const reps = set.reps ?? set.hintReps ?? above?.reps ?? null
     if (kg === null && reps === null) {
       dialogs.toast('Erst Gewicht oder Wiederholungen eintragen')
       openCell({ entryId: entry.id, setId: set.id, field: 'kg' })
