@@ -5,9 +5,9 @@ import { useDialogs } from '../components/Dialogs'
 import { db, uid } from '../db'
 import { useExercises, useSettings } from '../hooks'
 import { useNav } from '../nav'
-import { startWorkout } from '../lib/actions'
+import { startWorkout, suggestionFor } from '../lib/actions'
 import { exportBackup } from '../lib/backup'
-import { fmtDate } from '../lib/format'
+import { fmtDate, relativeDay } from '../lib/format'
 import type { Routine } from '../types'
 
 export function useStartWorkout() {
@@ -47,6 +47,22 @@ export function Home() {
     for (const w of workouts ?? []) if (w.routineId && !m.has(w.routineId)) m.set(w.routineId, w.start)
     return m
   }, [workouts])
+
+  // "Heute dran": the routine after the last finished one, in card order
+  const today = useMemo(() => {
+    const list = routines ?? []
+    if (list.length === 0 || !workouts) return null
+    const lastW = workouts.find((w) => w.routineId && list.some((r) => r.id === w.routineId))
+    const idx = lastW ? list.findIndex((r) => r.id === lastW.routineId) : -1
+    const next = list[(idx + 1) % list.length]
+    const latest = workouts[0]
+    const doneToday = latest ? new Date(latest.start).toDateString() === new Date().toDateString() : false
+    const ready = next.exercises.filter((e) => {
+      const work = e.sets.filter((x) => !x.warmup).length
+      return suggestionFor(e.exerciseId, work, { workouts, exercises, settings })?.kind === 'increase'
+    }).length
+    return { next, last: lastW, doneToday, ready }
+  }, [routines, workouts, exercises, settings])
 
   const daysSinceBackup = settings.lastBackup ? Math.floor((Date.now() - settings.lastBackup) / 86400000) : null
   const needsBackup = (workouts?.length ?? 0) >= 3 && (daysSinceBackup === null || daysSinceBackup >= 14)
@@ -111,6 +127,31 @@ export function Home() {
             <b>Jetzt sichern</b>
           </span>
         </button>
+      )}
+
+      {today && (
+        <div className={`today-card${today.doneToday ? ' done' : ''}`}>
+          <div className="today-label">{today.doneToday ? 'Heute erledigt ✓ · Als Nächstes' : 'Heute dran'}</div>
+          <div className="today-name">{today.next.name}</div>
+          <div className="today-meta">
+            {today.last
+              ? `Zuletzt: ${routines?.find((r) => r.id === today.last?.routineId)?.name ?? today.last.name}, ${relativeDay(today.last.start)}`
+              : `${today.next.exercises.length} Übungen`}
+          </div>
+          {today.ready > 0 && (
+            <div className="today-ready">
+              ↑ {today.ready} {today.ready === 1 ? 'Übung bereit' : 'Übungen bereit'} zum Steigern
+            </div>
+          )}
+          <div className="row" style={{ marginTop: 14 }}>
+            <button className="btn today-start" onClick={() => start(today.next)}>
+              {today.next.name} starten
+            </button>
+            <button className="btn today-more" onClick={() => nav.push({ type: 'routine-preview', id: today.next.id })}>
+              Ansehen
+            </button>
+          </div>
+        </div>
       )}
 
       <p className="label">Schnellstart</p>

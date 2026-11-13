@@ -150,8 +150,7 @@ export function ActiveWorkout({ initial, z }: Props) {
     }
     await finishWorkout(finished, updateRoutine)
     nav.setActiveOpen(false)
-    nav.push({ type: 'workout-detail', id: finished.id })
-    dialogs.toast('Workout gespeichert')
+    nav.push({ type: 'workout-summary', id: finished.id })
   }
 
   const restActive = w.rest && w.rest.endsAt > now

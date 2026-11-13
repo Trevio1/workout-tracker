@@ -45,3 +45,16 @@ export function parseNum(s: string): number | null {
   const n = Number(t)
   return Number.isFinite(n) ? n : null
 }
+
+/** "heute", "gestern", "vor 3 Tagen" */
+export function relativeDay(t: number, now = Date.now()): string {
+  const day = (x: number) => {
+    const d = new Date(x)
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  }
+  const diff = Math.round((day(now) - day(t)) / 86400000)
+  if (diff <= 0) return 'heute'
+  if (diff === 1) return 'gestern'
+  if (diff < 14) return `vor ${diff} Tagen`
+  return `am ${fmtDate(t)}`
+}
