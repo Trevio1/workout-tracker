@@ -13,6 +13,8 @@ import { sessionsFor } from '../lib/stats'
 import { stepFor, suggest } from '../lib/progression'
 import { editRange, editStep, rangeText } from '../components/exerciseSettings'
 import { CATEGORY_LABEL } from '../types'
+import { HowTo } from '../components/HowTo'
+import { libraryItem } from '../lib/library'
 
 type Metric = 'maxKg' | 'bestE1rm' | 'volume' | 'reps'
 
@@ -24,10 +26,14 @@ export function ExerciseDetail({ id, z }: { id: string; z: number }) {
   const settings = useSettings()
   const [metric, setMetric] = useState<Metric | null>(null)
   const [editing, setEditing] = useState(false)
+  const [tab, setTab] = useState<'howto' | 'progress' | null>(null)
 
   const sessions = useMemo(() => sessionsFor(id, workouts ?? []), [id, workouts])
 
   if (!ex) return null
+  const lib = libraryItem(ex)
+  // default: instructions until the exercise has history
+  const view = tab ?? (sessions.length > 0 || !lib ? 'progress' : 'howto')
   const labels = fieldLabels(ex.category)
   const weighted = ex.category !== 'bodyweight' && ex.category !== 'cardio'
   const m: Metric = metric ?? (weighted ? 'bestE1rm' : 'reps')
@@ -115,6 +121,23 @@ export function ExerciseDetail({ id, z }: { id: string; z: number }) {
         <p className="muted" style={{ margin: '4px 0 12px' }}>
           {CATEGORY_LABEL[ex.category]} · {ex.muscle}
         </p>
+        {lib && (
+          <div className="seg">
+            <button className={view === 'howto' ? 'on' : ''} onClick={() => setTab('howto')}>
+              Anleitung
+            </button>
+            <button className={view === 'progress' ? 'on' : ''} onClick={() => setTab('progress')}>
+              Fortschritt
+            </button>
+          </div>
+        )}
+        {view === 'howto' && lib ? (
+          <>
+            <HowTo item={lib} />
+            <p className="credit">Fotos: free-exercise-db (gemeinfrei). Anleitung: Satzbuch.</p>
+          </>
+        ) : (
+          <>
         {ex.note ? (
           <button className="pin-note" style={{ marginBottom: 14 }} onClick={editNote}>
             <span>{ex.note}</span>
@@ -225,6 +248,8 @@ export function ExerciseDetail({ id, z }: { id: string; z: number }) {
                 </div>
               </button>
             ))}
+          </>
+        )}
           </>
         )}
       </Sheet>

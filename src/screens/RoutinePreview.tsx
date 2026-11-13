@@ -6,6 +6,7 @@ import { useNav } from '../nav'
 import { useStartWorkout } from './Home'
 import { fmtDate, fmtSet } from '../lib/format'
 import { CATEGORY_LABEL } from '../types'
+import { ExerciseThumb } from '../components/ExerciseThumb'
 
 export function RoutinePreview({ id, z }: { id: string; z: number }) {
   const nav = useNav()
@@ -57,7 +58,7 @@ export function RoutinePreview({ id, z }: { id: string; z: number }) {
           const first = e.sets.find((s) => !s.warmup) ?? e.sets[0]
           return (
             <div className="list-item" key={e.id}>
-              <div className="avatar">{ex?.name[0] ?? '?'}</div>
+              <ExerciseThumb exercise={ex} />
               <div className="grow">
                 <div className="name">
                   {e.sets.length} × {ex?.name ?? 'Unbekannt'}

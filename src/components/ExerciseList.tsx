@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Icon } from './Icon'
+import { ExerciseThumb } from './ExerciseThumb'
+import { englishName, libraryItem } from '../lib/library'
+import { normalize } from '../lib/text'
 import { CATEGORY_LABEL, type Category, type Exercise } from '../types'
 
 interface Props {
@@ -8,20 +11,34 @@ interface Props {
   onPick: (ex: Exercise) => void
 }
 
-const FILTERS: (Category | 'all')[] = ['all', 'barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'cardio', 'other']
+const FILTERS: (Category | 'all')[] = ['all', 'barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'kettlebell', 'cardio', 'other']
+const MUSCLES = ['Brust', 'Rücken', 'Schultern', 'Bizeps', 'Trizeps', 'Beine', 'Po', 'Waden', 'Bauch', 'Unterarme', 'Nacken', 'Ganzkörper', 'Cardio']
+
+/** text the search runs against: German name, muscles, aliases and the English source name */
+function haystack(e: Exercise): string {
+  const lib = libraryItem(e)
+  const parts = [e.name, e.muscle]
+  if (lib) parts.push(...lib.aliases, englishName(lib), ...lib.primary)
+  return parts.map((p) => normalize(p)).join(' ')
+}
 
 export function ExerciseList({ exercises, selected, onPick }: Props) {
   const [q, setQ] = useState('')
   const [cat, setCat] = useState<Category | 'all'>('all')
+  const [muscle, setMuscle] = useState<string>('all')
+
+  const index = useMemo(() => new Map(exercises.map((e) => [e.id, haystack(e)])), [exercises])
 
   const groups = useMemo(() => {
-    const needle = q.trim().toLowerCase()
+    const words = q.trim().split(/\s+/).map(normalize).filter(Boolean)
     const filtered = exercises
       .filter((e) => cat === 'all' || e.category === cat)
-      .filter(
-        (e) =>
-          !needle || e.name.toLowerCase().includes(needle) || e.muscle.toLowerCase().includes(needle),
-      )
+      .filter((e) => muscle === 'all' || e.muscle === muscle)
+      .filter((e) => {
+        if (words.length === 0) return true
+        const h = index.get(e.id) ?? ''
+        return words.every((w) => h.includes(w))
+      })
       .sort((a, b) => a.name.localeCompare(b.name, 'de'))
     const map = new Map<string, Exercise[]>()
     for (const e of filtered) {
@@ -30,8 +47,8 @@ export function ExerciseList({ exercises, selected, onPick }: Props) {
       arr.push(e)
       map.set(letter, arr)
     }
-    return [...map.entries()]
-  }, [exercises, q, cat])
+    return { list: [...map.entries()], count: filtered.length }
+  }, [exercises, q, cat, muscle, index])
 
   return (
     <>
@@ -40,7 +57,7 @@ export function ExerciseList({ exercises, selected, onPick }: Props) {
         <input
           className="text-input"
           type="search"
-          placeholder="Übung suchen"
+          placeholder="Übung suchen, auch englisch"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
@@ -48,12 +65,22 @@ export function ExerciseList({ exercises, selected, onPick }: Props) {
       <div className="chips">
         {FILTERS.map((f) => (
           <button key={f} className={`chip${f === cat ? ' on' : ''}`} onClick={() => setCat(f)}>
-            {f === 'all' ? 'Alle' : CATEGORY_LABEL[f]}
+            {f === 'all' ? 'Alle Geräte' : CATEGORY_LABEL[f]}
           </button>
         ))}
       </div>
-      {groups.length === 0 && <div className="empty">Keine Übung gefunden.</div>}
-      {groups.map(([letter, items]) => (
+      <div className="chips" style={{ marginTop: -4 }}>
+        {['all', ...MUSCLES].map((m) => (
+          <button key={m} className={`chip small${m === muscle ? ' on' : ''}`} onClick={() => setMuscle(m)}>
+            {m === 'all' ? 'Alle Muskeln' : m}
+          </button>
+        ))}
+      </div>
+      <div className="muted small" style={{ margin: '2px 4px 0' }}>
+        {groups.count} {groups.count === 1 ? 'Übung' : 'Übungen'}
+      </div>
+      {groups.list.length === 0 && <div className="empty" style={{ marginTop: 10 }}>Keine Übung gefunden.</div>}
+      {groups.list.map(([letter, items]) => (
         <div key={letter}>
           <div className="letter">{letter}</div>
           <div className="list">
@@ -61,7 +88,7 @@ export function ExerciseList({ exercises, selected, onPick }: Props) {
               const on = selected?.has(e.id) ?? false
               return (
                 <button key={e.id} className={`list-item${on ? ' selected' : ''}`} onClick={() => onPick(e)}>
-                  <div className="avatar">{on ? <Icon name="check" size={18} stroke={3} /> : e.name[0]}</div>
+                  <ExerciseThumb exercise={e} selected={on} />
                   <div className="grow">
                     <div className="name">{e.name}</div>
                     <div className="meta">

@@ -30,7 +30,18 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // exercise photos are not precached (too many); each one is cached the first time it is shown
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.includes('/ex/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'exercise-photos',
+              expiration: { maxEntries: 800, maxAgeSeconds: 60 * 60 * 24 * 365 },
+            },
+          },
+        ],
       },
     }),
   ],

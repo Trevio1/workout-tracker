@@ -28,6 +28,7 @@ const DEFAULT_STEP: Record<Exercise['category'], number> = {
   machine: 2.5,
   cable: 2.5,
   bodyweight: 2.5,
+  kettlebell: 4,
   cardio: 0,
   other: 2.5,
 }

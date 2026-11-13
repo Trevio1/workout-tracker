@@ -9,7 +9,7 @@ interface Props {
   onClose: (id: string | null) => void
 }
 
-const MUSCLES = ['Brust', 'Rücken', 'Schultern', 'Bizeps', 'Trizeps', 'Beine', 'Po', 'Waden', 'Bauch', 'Nacken', 'Cardio', 'Ganzkörper']
+const MUSCLES = ['Brust', 'Rücken', 'Schultern', 'Bizeps', 'Trizeps', 'Unterarme', 'Beine', 'Po', 'Waden', 'Bauch', 'Nacken', 'Ganzkörper', 'Cardio']
 
 export function ExerciseForm({ z, initial, onClose }: Props) {
   const [name, setName] = useState(initial?.name ?? '')

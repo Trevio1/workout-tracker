@@ -2,6 +2,7 @@ import { db, uid } from '../db'
 import { CATEGORY_LABEL, type Category, type Exercise, type ExerciseEntry, type Routine } from '../types'
 import { newSet } from './actions'
 import { rangeFromNote } from './range'
+import { normalize } from './text'
 
 // ---------- Prompt ----------
 
@@ -168,15 +169,8 @@ export function parsePlan(text: string): ParsedRoutine[] {
 
 // ---------- Matching & saving ----------
 
-export function normalize(s: string): string {
-  return s
-    .toLowerCase()
-    .replace(/ä/g, 'ae')
-    .replace(/ö/g, 'oe')
-    .replace(/ü/g, 'ue')
-    .replace(/ß/g, 'ss')
-    .replace(/[^a-z0-9]/g, '')
-}
+
+export { normalize }
 
 export interface ResolvedExercise extends ParsedExercise {
   /** id of an existing exercise, or undefined if it will be created */

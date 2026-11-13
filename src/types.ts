@@ -4,6 +4,7 @@ export type Category =
   | 'machine'
   | 'cable'
   | 'bodyweight'
+  | 'kettlebell'
   | 'cardio'
   | 'other'
 
@@ -20,6 +21,8 @@ export interface Exercise {
   repMax?: number
   /** Smallest weight jump in kg (learned from history if unset) */
   step?: number
+  /** id of the library entry with photos and instructions */
+  libId?: string
 }
 
 export interface SetRow {
@@ -89,6 +92,7 @@ export const CATEGORY_LABEL: Record<Category, string> = {
   machine: 'Maschine',
   cable: 'Kabelzug',
   bodyweight: 'Körpergewicht',
+  kettlebell: 'Kettlebell',
   cardio: 'Cardio',
   other: 'Sonstiges',
 }
