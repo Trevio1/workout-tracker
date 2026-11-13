@@ -6,5 +6,6 @@ Privates Projekt von Luca, gehört nicht zu Spotstar oder Primodeus.
 - Repo: https://github.com/Trevio1/workout-tracker (öffentlich, nur Code, keine Nutzerdaten)
 - Deployment: Push auf `main` → GitHub Action baut und veröffentlicht auf Pages (ca. 1 Min.)
 - Stack: Vite + React + TypeScript, PWA über vite-plugin-pwa, Daten lokal in IndexedDB (Dexie)
+- Tests: `npm test` (Vitest, Logik in `src/lib/*.test.ts`, v. a. Steigerungs-Assistent `progression.ts`)
 - Lokal: `npm run dev`; Build mit Unterpfad: `BASE=/workout-tracker/ npm run build`
 - Daten liegen nur auf dem Gerät. Änderungen am Datenmodell (`src/db.ts`) immer mit neuer Dexie-Version + Migration, sonst gehen Nutzerdaten kaputt.
