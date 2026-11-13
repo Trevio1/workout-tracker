@@ -18,6 +18,8 @@ Regeln:
 - "sets" ist eine Liste mit einem Eintrag pro Satz. "kg" und "reps" als Zahl oder null, wenn auf dem Foto nichts steht. Bei Bereichen wie 8-12 nimm die untere Zahl. Aufwärmsätze bekommen "warmup": true.
 - Steht nur "3x10", dann sind das 3 Sätze mit reps 10.
 - Bei Cardio: "kg" = Distanz in km, "reps" = Dauer in Minuten.
+- "note" (optional): Wiederholungsbereich und Ausführungshinweis vom Foto, z. B. "5–8 Wdh. · Kabel auf Hüfthöhe, mit Schlaufe". Ohne Infos weglassen.
+- Sind zwei Varianten derselben Übung im Plan (z. B. "Latzug, breiter Griff" und "Latzug, einarmig"), behalte beide Namen getrennt.
 - Erfinde nichts. Wenn du etwas nicht lesen kannst, lass es weg.
 
 Antworte NUR mit einem JSON-Codeblock in genau diesem Format:
@@ -32,6 +34,7 @@ Antworte NUR mit einem JSON-Codeblock in genau diesem Format:
           "name": "Bankdrücken",
           "category": "barbell",
           "muscle": "Brust",
+          "note": "6–8 Wdh. · Schulterblätter zusammen",
           "sets": [
             { "kg": 80, "reps": 8 },
             { "kg": 80, "reps": 8 },
@@ -60,6 +63,7 @@ export interface ParsedExercise {
   name: string
   category: Category
   muscle: string
+  note?: string
   sets: ParsedSet[]
 }
 
@@ -136,6 +140,7 @@ export function parsePlan(text: string): ParsedRoutine[] {
         name: toStr(e.name),
         category: toCategory(e.category),
         muscle: toStr(e.muscle) || 'Sonstiges',
+        note: toStr(e.note) || undefined,
         sets: parseSets(e),
       }))
       .filter((e) => e.name !== ''),
@@ -191,9 +196,13 @@ export async function applyImport(routines: ResolvedRoutine[]): Promise<{ routin
         let exId = e.existingId ?? created.get(normalize(e.name))
         if (!exId) {
           exId = `ex-custom-${uid()}`
-          await db.exercises.add({ id: exId, name: e.name, category: e.category, muscle: e.muscle, custom: true })
+          await db.exercises.add({ id: exId, name: e.name, category: e.category, muscle: e.muscle, note: e.note, custom: true })
           created.set(normalize(e.name), exId)
           newExercises += 1
+        } else if (e.note) {
+          // never overwrite a note the user already wrote
+          const existing = await db.exercises.get(exId)
+          if (existing && !existing.note) await db.exercises.update(exId, { note: e.note })
         }
         const sets = e.sets.length > 0 ? e.sets : [{ kg: null, reps: null, warmup: false }]
         entries.push({
