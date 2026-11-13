@@ -11,6 +11,7 @@ import { Home } from './screens/Home'
 import { History } from './screens/History'
 import { Exercises } from './screens/Exercises'
 import { Settings } from './screens/Settings'
+import { Stats } from './screens/Stats'
 import { ActiveWorkout } from './screens/ActiveWorkout'
 import { RoutineEditor } from './screens/RoutineEditor'
 import { RoutinePreview } from './screens/RoutinePreview'
@@ -19,12 +20,13 @@ import { ExerciseDetail } from './screens/ExerciseDetail'
 import { ImportPlan } from './screens/ImportPlan'
 import { WorkoutSummary } from './screens/WorkoutSummary'
 
-type Tab = 'home' | 'history' | 'exercises' | 'settings'
+type Tab = 'home' | 'history' | 'stats' | 'exercises' | 'settings'
 
 const TABS: { id: Tab; label: string; icon: IconName }[] = [
   { id: 'home', label: 'Training', icon: 'dumbbell' },
   { id: 'history', label: 'Verlauf', icon: 'history' },
-  { id: 'exercises', label: 'Übungen', icon: 'chart' },
+  { id: 'stats', label: 'Statistik', icon: 'chart' },
+  { id: 'exercises', label: 'Übungen', icon: 'list' },
   { id: 'settings', label: 'Einstellungen', icon: 'settings' },
 ]
 
@@ -78,6 +80,7 @@ function Shell() {
     <>
       {tab === 'home' && <Home />}
       {tab === 'history' && <History />}
+      {tab === 'stats' && <Stats />}
       {tab === 'exercises' && <Exercises />}
       {tab === 'settings' && <Settings />}
 

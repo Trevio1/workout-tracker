@@ -21,6 +21,7 @@ type IconName =
   | 'camera'
   | 'copy'
   | 'paste'
+  | 'list'
 
 const paths: Record<IconName, string> = {
   plus: 'M12 5v14M5 12h14',
@@ -46,6 +47,7 @@ const paths: Record<IconName, string> = {
   camera: 'M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
   copy: 'M9 9h11v11H9zM5 15H4V4h11v1',
   paste: 'M9 4h6v3H9zM8 5H5v16h14V5h-3M8 13h8M8 17h5',
+  list: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
 }
 
 interface Props {
