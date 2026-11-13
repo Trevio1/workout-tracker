@@ -8,6 +8,8 @@ import { fieldLabels } from '../hooks'
 import { entryForExercise, newSet } from '../lib/actions'
 import { fmtNum, fmtSet, parseNum } from '../lib/format'
 import { unlockAudio } from '../lib/sound'
+import { setFeedback, stepFor, type Suggestion } from '../lib/progression'
+import { editRange, editStep, rangeText } from './exerciseSettings'
 import type { Exercise, ExerciseEntry, Field, SetRow, Settings } from '../types'
 
 export type EditorMode = 'live' | 'plan' | 'edit'
@@ -28,6 +30,10 @@ interface Props {
   onSetDone?: () => void
   onOpenExercise?: (id: string) => void
   onKeypadChange?: (open: boolean) => void
+  /** progression suggestion for an entry (live mode) */
+  suggestFor?: (entry: ExerciseEntry) => Suggestion | null
+  /** effective weight step for an exercise, learned from history */
+  stepOf?: (exerciseId: string) => number
   z: number
 }
 
@@ -45,6 +51,8 @@ export function EntriesEditor({
   onSetDone,
   onOpenExercise,
   onKeypadChange,
+  suggestFor,
+  stepOf,
   z,
 }: Props) {
   const dialogs = useDialogs()
@@ -149,6 +157,39 @@ export function EntriesEditor({
     setFocus(null)
     updateSet(entry.id, set.id, { kg, reps, done: true })
     onSetDone?.()
+    const ex = exercises.get(entry.exerciseId)
+    const tip = ex ? setFeedback(ex, reps, set.warmup) : null
+    if (tip) dialogs.toast(tip)
+  }
+
+  function applyToOpenSets(entry: ExerciseEntry, sg: Suggestion) {
+    let j = 0
+    updateEntry(entry.id, (e) => ({
+      ...e,
+      sets: e.sets.map((s) => {
+        if (s.warmup) return s
+        const reps = sg.reps[j] ?? sg.reps[sg.reps.length - 1] ?? null
+        j += 1
+        if (s.done) return s
+        return { ...s, kg: sg.kg ?? s.kg, reps: reps || s.reps }
+      }),
+    }))
+  }
+
+  async function chipMenu(entry: ExerciseEntry, ex: Exercise, sg: Suggestion | null) {
+    const canApply = sg && sg.kind !== 'norange' && sg.kind !== 'first' && mode === 'live'
+    const range = rangeText(ex)
+    const choice = await dialogs.menu(
+      [
+        ...(canApply ? [{ id: 'apply', label: 'In offene Sätze übernehmen', bold: true }] : []),
+        { id: 'range', label: range ? `Bereich ändern (${range})` : 'Wiederholungsbereich festlegen' },
+        ...(ex.category !== 'bodyweight' ? [{ id: 'step', label: 'Gewichtsschritt ändern' }] : []),
+      ],
+      sg?.reason ?? (range ? `Ziel: ${range}` : 'Lege einen Bereich fest, z. B. 6-10.'),
+    )
+    if (choice === 'apply' && sg) applyToOpenSets(entry, sg)
+    if (choice === 'range') await editRange(ex, dialogs)
+    if (choice === 'step') await editStep(ex, stepOf?.(ex.id) ?? stepFor(ex, []), dialogs)
   }
 
   function addSet(entry: ExerciseEntry) {
@@ -197,6 +238,7 @@ export function EntriesEditor({
     const choice = await dialogs.menu(
       [
         { id: 'note', label: ex?.note ? 'Notiz bearbeiten' : 'Notiz anheften' },
+        ...(ex && ex.category !== 'cardio' ? [{ id: 'range', label: 'Wiederholungsbereich' }] : []),
         ...(index > 0 ? [{ id: 'up', label: 'Nach oben' }] : []),
         ...(index < entries.length - 1 ? [{ id: 'down', label: 'Nach unten' }] : []),
         { id: 'replace', label: 'Übung ersetzen' },
@@ -205,6 +247,7 @@ export function EntriesEditor({
       ex?.name,
     )
     if (choice === 'note' && ex) await editNote(ex)
+    if (choice === 'range' && ex) await editRange(ex, dialogs)
     if (choice === 'up' || choice === 'down') {
       const next = [...entries]
       const j = choice === 'up' ? index - 1 : index + 1
@@ -259,6 +302,18 @@ export function EntriesEditor({
                 <Icon name="dots" size={20} />
               </button>
             </div>
+            {ex && ex.category !== 'cardio' && (() => {
+              const sg = mode === 'live' ? (suggestFor?.(entry) ?? null) : null
+              const kind = sg?.kind ?? (ex.repMin ? 'range' : 'norange')
+              const label = sg?.label ?? rangeText(ex) ?? 'Bereich festlegen'
+              if (mode === 'edit') return null
+              return (
+                <button className={`prog-chip ${kind}`} onClick={() => chipMenu(entry, ex, sg)}>
+                  {label}
+                  {sg && ex.repMin && sg.kind !== 'first' && <span className="prog-range">{rangeText(ex)}</span>}
+                </button>
+              )
+            })()}
             {ex?.note && (
               <button className="pin-note" onClick={() => editNote(ex)}>
                 <span>{ex.note}</span>

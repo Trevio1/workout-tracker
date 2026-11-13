@@ -6,10 +6,12 @@ import { LineChart } from '../components/LineChart'
 import { ExerciseForm } from '../components/ExerciseForm'
 import { useDialogs } from '../components/Dialogs'
 import { db } from '../db'
-import { fieldLabels } from '../hooks'
+import { fieldLabels, useSettings } from '../hooks'
 import { useNav } from '../nav'
 import { fmtDate, fmtNum, fmtSet } from '../lib/format'
 import { sessionsFor } from '../lib/stats'
+import { stepFor, suggest } from '../lib/progression'
+import { editRange, editStep, rangeText } from '../components/exerciseSettings'
 import { CATEGORY_LABEL } from '../types'
 
 type Metric = 'maxKg' | 'bestE1rm' | 'volume' | 'reps'
@@ -19,6 +21,7 @@ export function ExerciseDetail({ id, z }: { id: string; z: number }) {
   const dialogs = useDialogs()
   const ex = useLiveQuery(() => db.exercises.get(id), [id])
   const workouts = useLiveQuery(() => db.workouts.toArray(), [])
+  const settings = useSettings()
   const [metric, setMetric] = useState<Metric | null>(null)
   const [editing, setEditing] = useState(false)
 
@@ -61,12 +64,16 @@ export function ExerciseDetail({ id, z }: { id: string; z: number }) {
     const choice = await dialogs.menu(
       [
         { id: 'note', label: ex.note ? 'Notiz bearbeiten' : 'Notiz anheften' },
+        ...(ex.category !== 'cardio' ? [{ id: 'range', label: 'Wiederholungsbereich' }] : []),
+        ...(ex.category !== 'cardio' && ex.category !== 'bodyweight' ? [{ id: 'step', label: 'Gewichtsschritt' }] : []),
         ...(ex.custom ? [{ id: 'edit', label: 'Übung bearbeiten' }] : []),
         ...(ex.custom && sessions.length === 0 ? [{ id: 'del', label: 'Übung löschen', danger: true }] : []),
       ],
       ex.name,
     )
     if (choice === 'note') await editNote()
+    if (choice === 'range') await editRange(ex, dialogs)
+    if (choice === 'step') await editStep(ex, stepFor(ex, sessions), dialogs)
     if (choice === 'edit') setEditing(true)
     if (choice === 'del') {
       const ok = await dialogs.confirm({ title: 'Übung löschen?', confirmLabel: 'Löschen', danger: true })
@@ -120,6 +127,35 @@ export function ExerciseDetail({ id, z }: { id: string; z: number }) {
             <Icon name="pin" size={16} /> Notiz anheften
           </button>
         )}
+
+        {ex.category !== 'cardio' && (() => {
+          const workCount = sessions.length
+            ? Math.max(1, sessions[sessions.length - 1].sets.filter((x) => !x.warmup).length)
+            : 2
+          const sg = suggest(ex, sessions, workCount, settings)
+          const step = stepFor(ex, sessions)
+          return (
+            <div className="prog-box">
+              <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
+                <b>Nächstes Mal</b>
+                <button className={`prog-chip ${sg.kind}`} style={{ margin: 0 }} onClick={() => editRange(ex, dialogs)}>
+                  {sg.label}
+                </button>
+              </div>
+              <div className="muted small" style={{ lineHeight: 1.45 }}>{sg.reason}</div>
+              <div className="row small" style={{ marginTop: 10, gap: 8, flexWrap: 'wrap' }}>
+                <button className="btn btn-grey btn-sm" onClick={() => editRange(ex, dialogs)}>
+                  Bereich: {rangeText(ex) ?? 'keiner'}
+                </button>
+                {ex.category !== 'bodyweight' && (
+                  <button className="btn btn-grey btn-sm" onClick={() => editStep(ex, step, dialogs)}>
+                    Schritt: {fmtNum(step)} kg{ex.step ? '' : ' (auto)'}
+                  </button>
+                )}
+              </div>
+            </div>
+          )
+        })()}
 
         {sessions.length === 0 ? (
           <div className="empty">Diese Übung hast du noch nicht gemacht. Nach dem ersten Workout siehst du hier deinen Fortschritt.</div>

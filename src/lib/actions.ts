@@ -1,33 +1,63 @@
 import { db, getSettings, uid } from '../db'
-import type { ActiveWorkout, ExerciseEntry, Routine, SetRow, Workout } from '../types'
-import { lastSetsByExercise } from './stats'
+import type { ActiveWorkout, Exercise, ExerciseEntry, Routine, Settings, SetRow, Workout } from '../types'
+import { suggest, type Suggestion } from './progression'
+import { lastSetsByExercise, sessionsFor } from './stats'
 
 export function newSet(partial: Partial<SetRow> = {}): SetRow {
   return { id: uid(), kg: null, reps: null, warmup: false, done: false, ...partial }
 }
 
-async function previousMap(): Promise<Map<string, SetRow[]>> {
-  const workouts = await db.workouts.orderBy('start').reverse().limit(200).toArray()
-  return lastSetsByExercise(workouts)
+interface Context {
+  workouts: Workout[]
+  previous: Map<string, SetRow[]>
+  exercises: Map<string, Exercise>
+  settings: Settings
+}
+
+async function loadContext(): Promise<Context> {
+  const workouts = await db.workouts.orderBy('start').reverse().limit(300).toArray()
+  const exercises = new Map((await db.exercises.toArray()).map((e) => [e.id, e]))
+  return { workouts, previous: lastSetsByExercise(workouts), exercises, settings: await getSettings() }
+}
+
+export function suggestionFor(
+  exerciseId: string,
+  workSetCount: number,
+  ctx: { workouts: Workout[]; exercises: Map<string, Exercise>; settings: Settings },
+): Suggestion | null {
+  const ex = ctx.exercises.get(exerciseId)
+  if (!ex || ex.category === 'cardio') return null
+  return suggest(ex, sessionsFor(exerciseId, ctx.workouts), workSetCount, ctx.settings)
+}
+
+/** Writes the suggestion into the grey placeholders of the work sets */
+export function applySuggestion(sets: SetRow[], s: Suggestion | null): SetRow[] {
+  if (!s || s.kind === 'norange') return sets
+  let j = 0
+  return sets.map((set) => {
+    if (set.warmup) return set
+    const reps = s.reps[j] ?? s.reps[s.reps.length - 1]
+    j += 1
+    return { ...set, hintKg: s.kg ?? set.hintKg ?? null, hintReps: reps || (set.hintReps ?? null) }
+  })
 }
 
 /** Builds the sets for an exercise added to a live workout, hinted from the last time */
 export async function entryForExercise(exerciseId: string): Promise<ExerciseEntry> {
-  const prev = (await previousMap()).get(exerciseId) ?? []
+  const ctx = await loadContext()
+  const prev = ctx.previous.get(exerciseId) ?? []
   const count = Math.max(prev.length, 1)
-  return {
-    id: uid(),
-    exerciseId,
-    sets: Array.from({ length: count }, (_, i) =>
-      newSet({ warmup: prev[i]?.warmup ?? false, hintKg: prev[i]?.kg ?? null, hintReps: prev[i]?.reps ?? null }),
-    ),
-  }
+  const sets = Array.from({ length: count }, (_, i) =>
+    newSet({ warmup: prev[i]?.warmup ?? false, hintKg: prev[i]?.kg ?? null, hintReps: prev[i]?.reps ?? null }),
+  )
+  const work = sets.filter((x) => !x.warmup).length
+  return { id: uid(), exerciseId, sets: applySuggestion(sets, suggestionFor(exerciseId, work, ctx)) }
 }
 
 export async function startWorkout(routine?: Routine): Promise<void> {
-  const prev = await previousMap()
+  const ctx = await loadContext()
   const exercises: ExerciseEntry[] = (routine?.exercises ?? []).map((e) => {
-    const last = prev.get(e.exerciseId) ?? []
+    const last = ctx.previous.get(e.exerciseId) ?? []
     // Fill down: a planned set without values takes the hint of the set above
     let kgAbove: number | null = null
     let repsAbove: number | null = null
@@ -38,7 +68,8 @@ export async function startWorkout(routine?: Routine): Promise<void> {
       repsAbove = hintReps
       return newSet({ warmup: s.warmup, hintKg, hintReps })
     })
-    return { id: uid(), exerciseId: e.exerciseId, sets }
+    const work = sets.filter((x) => !x.warmup).length
+    return { id: uid(), exerciseId: e.exerciseId, sets: applySuggestion(sets, suggestionFor(e.exerciseId, work, ctx)) }
   })
   const active: ActiveWorkout = {
     id: 'active',

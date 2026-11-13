@@ -17,7 +17,8 @@ import {
   toFinished,
 } from '../lib/actions'
 import { fmtClock } from '../lib/format'
-import { lastSetsByExercise } from '../lib/stats'
+import { lastSetsByExercise, sessionsFor, type Session } from '../lib/stats'
+import { stepFor, suggest } from '../lib/progression'
 import { unlockAudio } from '../lib/sound'
 import type { ActiveWorkout as Active, ExerciseEntry, RestState } from '../types'
 
@@ -38,6 +39,22 @@ export function ActiveWorkout({ initial, z }: Props) {
 
   const history = useLiveQuery(() => db.workouts.orderBy('start').reverse().limit(200).toArray(), [])
   const previous = useMemo(() => lastSetsByExercise(history ?? []), [history])
+  const exerciseIds = w.exercises.map((e) => e.exerciseId).join(',')
+  const sessionsById = useMemo(() => {
+    const m = new Map<string, Session[]>()
+    for (const id of exerciseIds.split(',')) if (id) m.set(id, sessionsFor(id, history ?? []))
+    return m
+  }, [exerciseIds, history])
+  const suggestFor = (entry: ExerciseEntry) => {
+    const ex = exercises.get(entry.exerciseId)
+    if (!ex || ex.category === 'cardio' || !history) return null
+    const work = entry.sets.filter((s) => !s.warmup).length
+    return suggest(ex, sessionsById.get(entry.exerciseId) ?? [], work, settings)
+  }
+  const stepOf = (id: string) => {
+    const ex = exercises.get(id)
+    return ex ? stepFor(ex, sessionsById.get(id) ?? []) : 2.5
+  }
 
   // Always derive from the latest state so back-to-back updates don't overwrite each other
   const update = useCallback((fn: (prev: Active) => Active) => {
@@ -190,6 +207,8 @@ export function ActiveWorkout({ initial, z }: Props) {
         settings={settings}
         previous={previous}
         onKeypadChange={setKbOpen}
+        suggestFor={suggestFor}
+        stepOf={stepOf}
         onOpenExercise={(id) => nav.push({ type: 'exercise-detail', id })}
         onSetDone={() => update((p) => ({ ...p, rest: startRest(settings.restSeconds) }))}
       />
